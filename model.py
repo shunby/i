@@ -13,7 +13,7 @@ from upsampling import Upsampling
 class model(object):
     def __init__(self, out_channels, time_length, residual_channels, residual_layers, residual_stacks,
             skip_out_channels, kernel_size, dropout, cin_channels, cin_time_length, gin_channels, gate_channels,
-            num_speakers):
+            num_speakers, use_gin, use_cin):
         self.out_channels = out_channels
         self.time_length = time_length
         self.residual_channels = residual_channels
@@ -27,6 +27,8 @@ class model(object):
         self.gate_channels = gate_channels
         self.num_speakers = num_speakers
         self.cin_time_length = cin_time_length
+        self.use_gin = use_gin
+        self.use_cin = use_cin
     
     def res_conv1d_glu(self, x, c, g, dilation, ind):
         split_former = layers.Lambda(lambda x : x[:, :,:x.shape[-1]//2], name=f"formerx{ind}")
@@ -68,14 +70,16 @@ class model(object):
         c: (B,*,*)
         """
         inputs = keras.Input(shape=(self.time_length, self.out_channels), name="audio")
-
-        gin = keras.Input(shape=(1), name="global")
-        g = layers.Embedding(self.num_speakers, self.gin_channels)(gin)
-        g = layers.Reshape((1, self.gin_channels))(g)
-        g = layers.Lambda(lambda x: tf.repeat(x, repeats=[self.time_length], axis=1))(g)
-
-        cin = keras.Input(shape=(self.cin_time_length, self.cin_channels), name="local")
-        c = Upsampling().upsample(cin, [4,4,4,4], self.cin_time_length, self.cin_channels)
+        g = None
+        c = None
+        if self.use_gin:
+            gin = keras.Input(shape=(1), name="global")
+            g = layers.Embedding(self.num_speakers, self.gin_channels)(gin)
+            g = layers.Reshape((1, self.gin_channels))(g)
+            g = layers.Lambda(lambda x: tf.repeat(x, repeats=[self.time_length], axis=1))(g)
+        if self.use_cin:
+            cin = keras.Input(shape=(self.cin_time_length, self.cin_channels), name="local")
+            c = Upsampling().upsample(cin, [4,4,4,4], self.cin_time_length, self.cin_channels)
 
         x = layers.Conv1D(self.residual_channels, 1, padding="causal")(inputs)
         for layer in range(self.residual_layers):
@@ -92,7 +96,12 @@ class model(object):
         x = layers.Activation("relu")(x)
         x = layers.Conv1D(self.out_channels, 1)(x)
         x = layers.Activation("softmax")(x)
-        return keras.Model([inputs, cin, gin], x)
-m = model(100,4096,1000,3,1,1000,1,0.05,20,16,40,1000,10).wavenet()
-# keras.utils.plot_model(m, to_file="model.png")
-m.summary()
+        input_tensors = [inputs]
+        if self.use_gin:
+            input_tensors.append(gin)
+        if self.use_cin:
+            input_tensors.append(cin)
+        return keras.Model(input_tensors, x)
+# m = model(100,4096,1000,3,1,1000,1,0.05,20,16,40,1000,10, False, False).wavenet()
+# keras.utils.plot_model(m, to_file="model2.png")
+# m.summary()
