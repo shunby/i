@@ -12,7 +12,7 @@ wavenet = model(
 wavenet.compile("rmsprop", tf.keras.losses.CategoricalCrossentropy(), metrics=["accuracy"])
 
 seq = MySequence(10, False)
-modelchk = tf.keras.callbacks.ModelCheckpoint(filepath="chkpoint", monitor="val_accuracy", save_best_only=True, mode="max")
+modelchk = tf.keras.callbacks.ModelCheckpoint(filepath="/content/drive/MyDrive/DL/Models", monitor="val_accuracy", save_best_only=True, mode="max")
 history = wavenet.fit(seq, epochs=50, validation_data=MySequence(10, True), callbacks=[modelchk])
-with open("history.dat", "wb") as f:
+with open("/content/drive/MyDrive/DL/history/history.dat", "wb") as f:
     pickle.dump(history, f)

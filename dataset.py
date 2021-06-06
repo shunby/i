@@ -44,7 +44,7 @@ class MySequence(tf.keras.utils.Sequence):
         with open("dataset.pickle", "rb") as f:
             self.data = pickle.load(f)
     def __len__(self):
-        return 10*20 if self.is_test else 90*20
+        return 10*5 if self.is_test else 90*5
     def __getitem__(self, index):
         x = []
         y = []
