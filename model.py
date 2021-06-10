@@ -84,6 +84,7 @@ class model(object):
         x = layers.Conv1D(self.residual_channels, 1, padding="causal")(inputs)
         for layer in range(self.residual_layers):
             dilation = 2 ** (layer % (self.residual_layers // self.residual_stacks))
+            # print(dilation)
             x, h = self.res_conv1d_glu(x, c, g, dilation, layer)
             if "skips" not in locals():
                 skips = h
